@@ -5,7 +5,7 @@
 #include "../mesh/generated/meshtastic/telemetry.pb.h"
 #include "INA3221Sensor.h"
 #include "TelemetrySensor.h"
-#include <INA3221.h>
+#include <INA3221Enhanced.h>
 
 INA3221Sensor::INA3221Sensor() : TelemetrySensor(meshtastic_TelemetrySensorType_INA3221, "INA3221"){};
 
@@ -18,6 +18,29 @@ int32_t INA3221Sensor::runOnce()
     if (!status) {
         ina3221.begin(nodeTelemetrySensorsMap[sensorType].second);
         ina3221.setShuntRes(100, 100, 100); // 0.1 Ohm shunt resistors
+        //TODO: setup INA3221 PV WARN CRI alerts: CH1=BAT, CH2=DC-DC, CH3=SOL
+        //float LOW_VOLTAGE_THRESHOLD = 3.4;       // voltios
+        //uint16_t LVT = (uint16_t)(LOW_VOLTAGE_THRESHOLD * 1000); // pasa a mV
+
+        //float HIGH_CURRENT_TRIGGER = 300.0;               // mA
+        //float shuntR = 0.1;                     // ohmios
+        //float currentA = HIGH_CURRENT_TRIGGER / 1000.0;    // pasa a amperios
+        //float vShunt = currentA * shuntR;       // V = I*R
+        //uint16_t HCT = (uint16_t)(vShunt / 0.00004);  // cada bit = 40uV
+        
+        //ina3221.writeRegister(INA3221_PV_LIMIT_REGISTER_CH1, LVT);
+        //ina3221.writeRegister(INA3221_PV_LIMIT_REGISTER_CH2, 0x7FFF); // valor por defecto que desactiva alerta
+        //ina3221.writeRegister(INA3221_PV_LIMIT_REGISTER_CH3, 0x7FFF); 
+
+        //ina3221.writeRegister(INA3221_CRI_REGISTER_CH1, 0x7FFF);
+        //ina3221.writeRegister(INA3221_CRI_REGISTER_CH2, valueFor500mA);
+        //ina3221.writeRegister(INA3221_CRI_REGISTER_CH3, 0x7FFF);
+
+        // Habilitar solo CH1 para PV
+        //ina3221.writeRegister(PV_ENABLE_REGISTER, 0b001); // bit2 = CH1
+
+        // Habilitar solo CH2 para CRI
+        //ina3221.writeRegister(CRI_ENABLE_REGISTER, 0b010); // bit0 = CH2
         status = true;
     } else {
         status = true;
