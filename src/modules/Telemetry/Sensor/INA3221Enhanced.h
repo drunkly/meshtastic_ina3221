@@ -40,5 +40,6 @@ public:
     INA3221Enhanced(ina3221_addr_t addr) : INA3221(addr) {};
     void enableUnderVoltageRegisters();
     void resetRegisters();
+    void preventBrownout(float batteryVoltage);
 };
 

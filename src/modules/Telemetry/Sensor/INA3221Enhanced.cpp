@@ -61,3 +61,9 @@ void INA3221Enhanced::resetRegisters() {
     _write(INA3221_REG_MASK_ENABLE, &PV_DEFAULT);
    
 }
+
+void INA3221Enhanced::preventBrownout(float batteryVoltage){
+    if(batteryVoltage<LV){
+        enableUnderVoltageRegisters();
+    }
+}
