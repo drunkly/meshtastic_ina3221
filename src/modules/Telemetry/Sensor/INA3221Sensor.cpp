@@ -5,7 +5,7 @@
 #include "../mesh/generated/meshtastic/telemetry.pb.h"
 #include "INA3221Sensor.h"
 #include "TelemetrySensor.h"
-#include <INA3221Enhanced.h>
+#include "INA3221Enhanced.h"
 
 INA3221Sensor::INA3221Sensor() : TelemetrySensor(meshtastic_TelemetrySensorType_INA3221, "INA3221"){};
 

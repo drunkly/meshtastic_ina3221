@@ -6,7 +6,7 @@
 #include "CurrentSensor.h"
 #include "TelemetrySensor.h"
 #include "VoltageSensor.h"
-#include <INA3221Enhanced.h>
+#include "INA3221Enhanced.h"
 
 #ifndef INA3221_ENV_CH
 #define INA3221_ENV_CH INA3221_CH1
