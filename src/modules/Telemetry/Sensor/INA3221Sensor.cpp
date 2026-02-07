@@ -104,8 +104,10 @@ bool INA3221Sensor::getPowerMetrics(meshtastic_Telemetry *measurement)
     measurement->variant.power_metrics.ch3_current = m.measurements[INA3221_CH3].current;
 
     if(measurement->variant.power_metrics.ch1_voltage<LV){
-        LOG_INFO("Enable UndervoltageRegisters (%f<%f",measurement->variant.power_metrics.ch1_voltage,LV);
+        LOG_INFO("Enable Undervoltage Registers (%f<%f)",measurement->variant.power_metrics.ch1_voltage,LV);
         ina3221.enableUnderVoltageRegisters(LV,HV);
+    }else{
+        LOG_INFO("Not enabling Undervoltage Registers (%f>%f)",measurement->variant.power_metrics.ch1_voltage,LV);
     }
     
 
