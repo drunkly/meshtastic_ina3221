@@ -6,7 +6,7 @@
 #include "CurrentSensor.h"
 #include "TelemetrySensor.h"
 #include "VoltageSensor.h"
-#include "INA3221Enhanced.h"
+#include "INA3221.h"
 
 #ifndef INA3221_ENV_CH
 #define INA3221_ENV_CH INA3221_CH1
@@ -19,7 +19,10 @@
 class INA3221Sensor : public TelemetrySensor, VoltageSensor, CurrentSensor
 {
   private:
-    INA3221Enhanced ina3221 = INA3221Enhanced(INA3221_ADDR42_SDA);
+    float LV = 3.5; // LOW Voltage
+    float HV = 3.7; // HIGH Voltage
+    
+    INA3221 ina3221 = INA3221(INA3221_ADDR42_SDA);
 
     // channel to report voltage/current for environment metrics
     static const ina3221_ch_t ENV_CH = INA3221_ENV_CH;

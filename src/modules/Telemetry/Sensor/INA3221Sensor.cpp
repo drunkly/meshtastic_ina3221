@@ -5,7 +5,7 @@
 #include "../mesh/generated/meshtastic/telemetry.pb.h"
 #include "INA3221Sensor.h"
 #include "TelemetrySensor.h"
-#include "INA3221Enhanced.h"
+#include "INA3221.h"
 
 INA3221Sensor::INA3221Sensor() : TelemetrySensor(meshtastic_TelemetrySensorType_INA3221, "INA3221"){};
 
@@ -16,9 +16,17 @@ int32_t INA3221Sensor::runOnce()
         return DEFAULT_SENSOR_MINIMUM_WAIT_TIME_BETWEEN_READS;
     }
     if (!status) {
+        LOG_INFO("INA 3221 BEGIN:");
         ina3221.begin(nodeTelemetrySensorsMap[sensorType].second);
+
+        LOG_INFO("Reset registers");
+        ina3221.reset();
+        LOG_INFO("Delay 1000 ms");
+        delay(1000); //Give some time to ina3221 to reset
+
+        LOG_INFO("Set shunt res:");
         ina3221.setShuntRes(100, 100, 100); // 0.1 Ohm shunt resistors
-        ina3221.resetRegisters();
+
         status = true;
     } else {
         status = true;
@@ -95,7 +103,12 @@ bool INA3221Sensor::getPowerMetrics(meshtastic_Telemetry *measurement)
     measurement->variant.power_metrics.ch3_voltage = m.measurements[INA3221_CH3].voltage;
     measurement->variant.power_metrics.ch3_current = m.measurements[INA3221_CH3].current;
 
-    ina3221.preventBrownout(m.measurements[INA3221_CH1].voltage);
+    if(measurement->variant.power_metrics.ch1_voltage<LV){
+        LOG_INFO("Enable UndervoltageRegisters");
+        ina3221.enableUnderVoltageRegisters(LV,HV);
+    }
+    
+
 
     return true;
 }
