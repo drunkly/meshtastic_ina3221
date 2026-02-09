@@ -27,6 +27,9 @@ int32_t INA3221Sensor::runOnce()
         LOG_INFO("Set shunt res:");
         ina3221.setShuntRes(100, 100, 100); // 0.1 Ohm shunt resistors
 
+        LOG_INFO("Set low limit really low to initalize pv alert");
+        ina3221.setPwrValidUpLimit(0);
+
         status = true;
     } else {
         status = true;
