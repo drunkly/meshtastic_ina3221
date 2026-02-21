@@ -28,8 +28,8 @@ int32_t INA3221Sensor::runOnce()
         ina3221.setShuntRes(100, 100, 100); // 0.1 Ohm shunt resistors
 
         LOG_INFO("Set low limit really low to initalize pv alert");
-        ina3221.setPwrValidLowLimit(HV*1000);
-        ina3221.setPwrValidUpLimit(-1000);
+        ina3221.setPwrValidLowLimit(0*1000);
+        ina3221.setPwrValidUpLimit(HV*1000);
 
         status = true;
     } else {
@@ -110,7 +110,7 @@ bool INA3221Sensor::getPowerMetrics(meshtastic_Telemetry *measurement)
 
     if(measurement->variant.power_metrics.ch1_voltage*1000<LV*1000){
         LOG_INFO("Enable Undervoltage Registers (%f<%f)",measurement->variant.power_metrics.ch1_voltage*1000,LV*1000);
-        ina3221.enableUnderVoltageRegisters(HV*1000,10*1000);
+        ina3221.enableUnderVoltageRegisters(0,HV*1000);
     }else{
         LOG_INFO("Not enabling Undervoltage Registers (%f>%f)",measurement->variant.power_metrics.ch1_voltage*1000,LV*1000);
     }
