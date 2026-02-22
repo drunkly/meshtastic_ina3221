@@ -26,3 +26,4 @@ meshtastic --host 192.168.3.156 --reboot-ota
 espota.py -r -i 192.168.3.156 -f .pio/build/heltec-v4/firmware.bin
 
 
+rmdir /s /q .pio\libdeps\heltec-v4\INA3221
