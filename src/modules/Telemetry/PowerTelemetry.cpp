@@ -88,9 +88,9 @@ int32_t PowerTelemetryModule::runOnce()
         if (!moduleConfig.telemetry.power_measurement_enabled)
             return disable();
 
-        ESP_LOGI("PowerTelemetry", "lastSentToMesh=%lu, lastSentToPhone=%lu", lastSentToMesh, lastSentToPhone);
-        ESP_LOGI("PowerTelemetry", "Throttle for phone? %s", Throttle::isWithinTimespanMs(lastSentToPhone, sendToPhoneIntervalMs) ? "blocked" : "ok");
-        ESP_LOGI("PowerTelemetry", "isToPhoneQueueEmpty()=%s",service->isToPhoneQueueEmpty() ? "true" : "false");
+        //ESP_LOGI("PowerTelemetry", "lastSentToMesh=%lu, lastSentToPhone=%lu", lastSentToMesh, lastSentToPhone);
+        //ESP_LOGI("PowerTelemetry", "Throttle for phone? %s", Throttle::isWithinTimespanMs(lastSentToPhone, sendToPhoneIntervalMs) ? "blocked" : "ok");
+        //ESP_LOGI("PowerTelemetry", "isToPhoneQueueEmpty()=%s",service->isToPhoneQueueEmpty() ? "true" : "false");
 
         if (((lastSentToMesh == 0) || !Throttle::isWithinTimespanMs(lastSentToMesh, sendToMeshIntervalMs)) &&
             airTime->isTxAllowedAirUtil()) {

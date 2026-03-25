@@ -76,7 +76,7 @@ struct _INA3221Measurements INA3221Sensor::getMeasurements()
 
 bool INA3221Sensor::getMetrics(meshtastic_Telemetry *measurement)
 {
-    ESP_LOGI("PowerTelemetry", "which_variant: %d", measurement->which_variant);
+    //ESP_LOGI("PowerTelemetry", "which_variant: %d", measurement->which_variant);
     switch (measurement->which_variant) {
     case meshtastic_Telemetry_environment_metrics_tag:
         return getEnvironmentMetrics(measurement);
