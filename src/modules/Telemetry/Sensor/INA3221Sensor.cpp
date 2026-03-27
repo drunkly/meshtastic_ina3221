@@ -16,8 +16,33 @@ int32_t INA3221Sensor::runOnce()
         return DEFAULT_SENSOR_MINIMUM_WAIT_TIME_BETWEEN_READS;
     }
     if (!status) {
+        LOG_INFO("INA 3221 BEGIN:");
         ina3221.begin(nodeTelemetrySensorsMap[sensorType].second);
+
+        LOG_INFO("Reset registers");
+        ina3221.reset();
+        LOG_INFO("Delay 1000 ms");
+        delay(1000); //Give some time to ina3221 to reset
+
+        LOG_INFO("Set shunt res:");
         ina3221.setShuntRes(100, 100, 100); // 0.1 Ohm shunt resistors
+
+        LOG_INFO("Set low limit really low to initalize pv alert");
+        ina3221.setPwrValidLowLimit(LV*1000);
+        ina3221.setPwrValidUpLimit(HV*1000); //3.8-10V => Valid=1 = LED = 0
+
+        //Check Battery Voltage
+        float battVolt = ina3221.getVoltage(INA3221_CH1);
+        if(battVolt*1000<LV*1000){
+            LOG_INFO("Enable Undervoltage Registers (%f<%f)",battVolt*1000,LV*1000);
+            ina3221.setCritAlertLatchEnable();
+            ina3221.setCritAlertShuntLimit(INA3221_CH1,0xFFFF);
+        }else{
+            LOG_INFO("Not enabling Undervoltage Registers (%f>%f)",battVolt*1000,LV*1000);
+        }
+
+        
+
         status = true;
     } else {
         status = true;
@@ -93,6 +118,15 @@ bool INA3221Sensor::getPowerMetrics(meshtastic_Telemetry *measurement)
     measurement->variant.power_metrics.ch2_current = m.measurements[INA3221_CH2].current;
     measurement->variant.power_metrics.ch3_voltage = m.measurements[INA3221_CH3].voltage;
     measurement->variant.power_metrics.ch3_current = m.measurements[INA3221_CH3].current;
+
+
+    if(measurement->variant.power_metrics.ch1_voltage*1000<LV*1000){
+        LOG_INFO("Enable Undervoltage Registers (%f<%f)",measurement->variant.power_metrics.ch1_voltage*1000,LV*1000);
+        ina3221.setCritAlertLatchEnable();
+        ina3221.setCritAlertShuntLimit(INA3221_CH1,0xFFFF);
+    }else{
+        LOG_INFO("Not enabling Undervoltage Registers (%f>%f)",measurement->variant.power_metrics.ch1_voltage*1000,LV*1000);
+    }
 
     return true;
 }
