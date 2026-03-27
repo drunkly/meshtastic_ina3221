@@ -19,6 +19,8 @@
 class INA3221Sensor : public TelemetrySensor, VoltageSensor, CurrentSensor
 {
   private:
+    float LV = 3.6; // LOW Voltage
+    float HV = 3.8; // HIGH Voltage
     INA3221 ina3221 = INA3221(INA3221_ADDR42_SDA);
 
     // channel to report voltage/current for environment metrics
