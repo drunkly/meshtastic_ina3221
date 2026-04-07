@@ -41,8 +41,6 @@ int32_t INA3221Sensor::runOnce()
             LOG_INFO("Not enabling Undervoltage Registers (%f>%f)",battVolt*1000,LV*1000);
         }
 
-        
-
         status = true;
     } else {
         status = true;
