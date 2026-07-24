@@ -15,11 +15,11 @@
 #include "StoreForwardModule.h"
 #include "MeshService.h"
 #include "NodeDB.h"
-#include "RTC.h"
 #include "Router.h"
 #include "Throttle.h"
 #include "airtime.h"
 #include "configuration.h"
+#include "gps/RTC.h"
 #include "memGet.h"
 #include "mesh-pb-constants.h"
 #include "mesh/generated/meshtastic/storeforward.pb.h"
@@ -80,9 +80,9 @@ void StoreForwardModule::populatePSRAM()
         (this->records ? this->records : (((memGet.getFreePsram() / 4) * 3) / sizeof(PacketHistoryStruct)));
     this->records = numberOfPackets;
 #if defined(ARCH_ESP32)
-    this->packetHistory = static_cast<PacketHistoryStruct *>(ps_calloc(numberOfPackets, sizeof(PacketHistoryStruct)));
+    this->packetHistory.reset(static_cast<PacketHistoryStruct *>(ps_calloc(numberOfPackets, sizeof(PacketHistoryStruct))));
 #elif defined(ARCH_PORTDUINO)
-    this->packetHistory = static_cast<PacketHistoryStruct *>(calloc(numberOfPackets, sizeof(PacketHistoryStruct)));
+    this->packetHistory.reset(static_cast<PacketHistoryStruct *>(calloc(numberOfPackets, sizeof(PacketHistoryStruct))));
 
 #endif
 
@@ -206,7 +206,7 @@ void StoreForwardModule::historyAdd(const meshtastic_MeshPacket &mp)
     this->packetHistory[this->packetHistoryTotalCount].hop_limit = mp.hop_limit;
     this->packetHistory[this->packetHistoryTotalCount].via_mqtt = mp.via_mqtt;
     this->packetHistory[this->packetHistoryTotalCount].transport_mechanism = mp.transport_mechanism;
-    memcpy(this->packetHistory[this->packetHistoryTotalCount].payload, p.payload.bytes, meshtastic_Constants_DATA_PAYLOAD_LEN);
+    memcpy(this->packetHistory[this->packetHistoryTotalCount].payload, p.payload.bytes, p.payload.size);
 
     this->packetHistoryTotalCount++;
 }
@@ -248,6 +248,8 @@ meshtastic_MeshPacket *StoreForwardModule::preparePayload(NodeNum dest, uint32_t
                 (this->packetHistory[i].to == NODENUM_BROADCAST || this->packetHistory[i].to == dest)) {
 
                 meshtastic_MeshPacket *p = allocDataPacket();
+                if (!p)
+                    return nullptr;
 
                 p->to = local ? this->packetHistory[i].to : dest; // PhoneAPI can handle original `to`
                 p->from = this->packetHistory[i].from;
@@ -304,6 +306,8 @@ meshtastic_MeshPacket *StoreForwardModule::preparePayload(NodeNum dest, uint32_t
 void StoreForwardModule::sendMessage(NodeNum dest, const meshtastic_StoreAndForward &payload)
 {
     meshtastic_MeshPacket *p = allocDataProtobuf(payload);
+    if (!p)
+        return;
 
     p->to = dest;
 
@@ -340,6 +344,8 @@ void StoreForwardModule::sendMessage(NodeNum dest, meshtastic_StoreAndForward_Re
 void StoreForwardModule::sendErrorTextMessage(NodeNum dest, bool want_response)
 {
     meshtastic_MeshPacket *pr = allocDataPacket();
+    if (!pr)
+        return;
     pr->to = dest;
     pr->priority = meshtastic_MeshPacket_Priority_BACKGROUND;
     pr->want_ack = false;

@@ -17,32 +17,50 @@ int32_t INA3221Sensor::runOnce()
     }
     if (!status) {
         LOG_INFO("INA 3221 BEGIN:");
-        ina3221.begin(nodeTelemetrySensorsMap[sensorType].second);
+        // Re-initialise with the address and Wire bus from the telemetry sensors map.
+        // (Rob Tillaart INA3221_RT takes address + TwoWire*, unlike sgtwilko which took Wire in begin().)
+        ina3221 = INA3221(nodeTelemetrySensorsMap[sensorType].first, nodeTelemetrySensorsMap[sensorType].second);
+        status = ina3221.begin();
 
-        LOG_INFO("Reset registers");
-        ina3221.reset();
+	LOG_INFO("Reset registers");
+	ina3221.reset();
         LOG_INFO("Delay 1000 ms");
         delay(1000); //Give some time to ina3221 to reset
 
         LOG_INFO("Set shunt res:");
-        ina3221.setShuntRes(100, 100, 100); // 0.1 Ohm shunt resistors
+        if (status) {
+            // Default all three channels to a 0.1 Ω shunt resistor.
+            // Override per-variant by defining INA3221_SHUNT_R_CH1/CH2/CH3 (in Ohms) in variant.h.
+#ifndef INA3221_SHUNT_R_CH1
+#define INA3221_SHUNT_R_CH1 0.1f
+#endif
+#ifndef INA3221_SHUNT_R_CH2
+#define INA3221_SHUNT_R_CH2 0.1f
+#endif
+#ifndef INA3221_SHUNT_R_CH3
+#define INA3221_SHUNT_R_CH3 0.1f
+#endif
+            ina3221.setShuntR(0, INA3221_SHUNT_R_CH1);
+            ina3221.setShuntR(1, INA3221_SHUNT_R_CH2);
+            ina3221.setShuntR(2, INA3221_SHUNT_R_CH3);
 
-        LOG_INFO("Set low limit really low to initalize pv alert");
-        ina3221.setPwrValidLowLimit(LV*1000);
-        ina3221.setPwrValidUpLimit(HV*1000); //3.8-10V => Valid=1 = LED = 0
+	
+	    LOG_INFO("Set low limit really low to initalize pv alert");
+	    ina3221.setPwrValidLowLimit(LV*1000);
+	    ina3221.setPwrValidUpLimit(HV*1000); //3.8-10V => Valid=1 = LED = 0
 
-        //Check Battery Voltage
-        float battVolt = ina3221.getVoltage(INA3221_CH1);
-        if(battVolt*1000<LV*1000){
-            LOG_INFO("Enable Undervoltage Registers (%f<%f)",battVolt*1000,LV*1000);
-            ina3221.setCritAlertLatchEnable();
-            ina3221.setCritAlertShuntLimit(INA3221_CH1,0xFFFF);
-        }else{
-            LOG_INFO("Not enabling Undervoltage Registers (%f>%f)",battVolt*1000,LV*1000);
+	    //Check Battery Voltage
+	    float battVolt = ina3221.getVoltage(INA3221_CH1);
+	    if(battVolt*1000<LV*1000){
+	        LOG_INFO("Enable Undervoltage Registers (%f<%f)",battVolt*1000,LV*1000);
+	        ina3221.setCritAlertLatchEnable();
+	        ina3221.setCritAlertShuntLimit(INA3221_CH1,0xFFFF);
+	    }else{
+	        LOG_INFO("Not enabling Undervoltage Registers (%f>%f)",battVolt*1000,LV*1000);
+	    }
         }
-
-        status = true;
     } else {
+        // Already initialised; status stays true and initI2CSensor() returns next poll interval.
         status = true;
     }
     return initI2CSensor();
@@ -50,12 +68,14 @@ int32_t INA3221Sensor::runOnce()
 
 void INA3221Sensor::setup() {}
 
-struct _INA3221Measurement INA3221Sensor::getMeasurement(ina3221_ch_t ch)
+struct _INA3221Measurement INA3221Sensor::getMeasurement(uint8_t ch)
 {
     struct _INA3221Measurement measurement;
 
-    measurement.voltage = ina3221.getVoltage(ch);
-    measurement.current = ina3221.getCurrent(ch);
+    measurement.voltage = ina3221.getBusVoltage(ch); // Volts
+    // getCurrent_mA() is used instead of getCurrent() because Rob Tillaart's getCurrent()
+    // returns Amperes; the telemetry proto and VoltageSensor/CurrentSensor interfaces expect mA.
+    measurement.current = ina3221.getCurrent_mA(ch); // milliAmps
 
     return measurement;
 }
@@ -66,7 +86,7 @@ struct _INA3221Measurements INA3221Sensor::getMeasurements()
 
     // INA3221 has 3 channels starting from 0
     for (int i = 0; i < 3; i++) {
-        measurements.measurements[i] = getMeasurement((ina3221_ch_t)i);
+        measurements.measurements[i] = getMeasurement((uint8_t)i);
     }
 
     return measurements;
@@ -110,13 +130,13 @@ bool INA3221Sensor::getPowerMetrics(meshtastic_Telemetry *measurement)
     measurement->variant.power_metrics.has_ch3_voltage = true;
     measurement->variant.power_metrics.has_ch3_current = true;
 
-    measurement->variant.power_metrics.ch1_voltage = m.measurements[INA3221_CH1].voltage;
-    measurement->variant.power_metrics.ch1_current = m.measurements[INA3221_CH1].current;
-    measurement->variant.power_metrics.ch2_voltage = m.measurements[INA3221_CH2].voltage;
-    measurement->variant.power_metrics.ch2_current = m.measurements[INA3221_CH2].current;
-    measurement->variant.power_metrics.ch3_voltage = m.measurements[INA3221_CH3].voltage;
-    measurement->variant.power_metrics.ch3_current = m.measurements[INA3221_CH3].current;
-
+    // INA3221 channel indices are zero-based (0=CH1, 1=CH2, 2=CH3).
+    measurement->variant.power_metrics.ch1_voltage = m.measurements[0].voltage;
+    measurement->variant.power_metrics.ch1_current = m.measurements[0].current;
+    measurement->variant.power_metrics.ch2_voltage = m.measurements[1].voltage;
+    measurement->variant.power_metrics.ch2_current = m.measurements[1].current;
+    measurement->variant.power_metrics.ch3_voltage = m.measurements[2].voltage;
+    measurement->variant.power_metrics.ch3_current = m.measurements[2].current;
 
     if(measurement->variant.power_metrics.ch1_voltage*1000<LV*1000){
         LOG_INFO("Enable Undervoltage Registers (%f<%f)",measurement->variant.power_metrics.ch1_voltage*1000,LV*1000);
@@ -131,12 +151,28 @@ bool INA3221Sensor::getPowerMetrics(meshtastic_Telemetry *measurement)
 
 uint16_t INA3221Sensor::getBusVoltageMv()
 {
-    return lround(ina3221.getVoltage(BAT_CH) * 1000);
+    return lround(ina3221.getBusVoltage_mV(BAT_CH));
 }
 
 int16_t INA3221Sensor::getCurrentMa()
 {
-    return lround(ina3221.getCurrent(BAT_CH));
+    return lround(ina3221.getCurrent_mA(BAT_CH));
+}
+
+// Bus voltage register (0x02 + ch*2): bits [15:3] unsigned, 1 LSB = 8 mV (datasheet p.6).
+// Voltage raw units: 1 count = 8 mV, so V_mV = raw * 8.
+int16_t INA3221Sensor::getRawBusVoltage(uint8_t ch)
+{
+    return (int16_t)(ina3221.getRegister(0x02 + ch * 2) >> 3);
+}
+
+// Shunt voltage register (0x01 + ch*2): bits [15:3] signed two's complement, 1 LSB = 40 µV (datasheet p.6).
+// Current raw units are shunt-voltage counts: 1 count = 40 uV, signed.
+// I_mA = (raw * 40 uV) / R_mOhm, because uV / mOhm = mA.
+// Example for 100 mOhm shunt: I_mA = raw * 40 / 100 = raw * 0.4.
+int16_t INA3221Sensor::getRawShuntCurrent(uint8_t ch)
+{
+    return (int16_t)(ina3221.getRegister(0x01 + ch * 2) >> 3);
 }
 
 #endif

@@ -9,11 +9,11 @@
 #include <INA3221.h>
 
 #ifndef INA3221_ENV_CH
-#define INA3221_ENV_CH INA3221_CH1
+#define INA3221_ENV_CH INA3221_CH1 // channel to report in environment metrics (default: CH1)
 #endif
 
 #ifndef INA3221_BAT_CH
-#define INA3221_BAT_CH INA3221_CH1
+#define INA3221_BAT_CH INA3221_CH1 // channel for device_battery_ina_address (default: CH1)
 #endif
 
 class INA3221Sensor : public TelemetrySensor, VoltageSensor, CurrentSensor
@@ -21,16 +21,19 @@ class INA3221Sensor : public TelemetrySensor, VoltageSensor, CurrentSensor
   private:
     float LV = 3.6; // LOW Voltage
     float HV = 3.8; // HIGH Voltage
-    INA3221 ina3221 = INA3221(INA3221_ADDR42_SDA);
+    // Placeholder constructor; re-initialised with correct address and Wire in runOnce().
+    INA3221 ina3221 = INA3221(INA3221_ADDR);
 
     // channel to report voltage/current for environment metrics
-    static const ina3221_ch_t ENV_CH = INA3221_ENV_CH;
+    static const uint8_t ENV_CH = INA3221_ENV_CH;
+    static_assert(INA3221_ENV_CH >= 0 && INA3221_ENV_CH <= 2, "INA3221_ENV_CH must be 0, 1, or 2");
 
     // channel to report battery voltage for device_battery_ina_address
-    static const ina3221_ch_t BAT_CH = INA3221_BAT_CH;
+    static const uint8_t BAT_CH = INA3221_BAT_CH;
+    static_assert(INA3221_BAT_CH >= 0 && INA3221_BAT_CH <= 2, "INA3221_BAT_CH must be 0, 1, or 2");
 
     // get a single measurement for a channel
-    struct _INA3221Measurement getMeasurement(ina3221_ch_t ch);
+    struct _INA3221Measurement getMeasurement(uint8_t ch);
 
     // get all measurements for all channels
     struct _INA3221Measurements getMeasurements();
@@ -47,6 +50,10 @@ class INA3221Sensor : public TelemetrySensor, VoltageSensor, CurrentSensor
     bool getMetrics(meshtastic_Telemetry *measurement) override;
     virtual uint16_t getBusVoltageMv() override;
     virtual int16_t getCurrentMa() override;
+
+    // Raw register reads (bits [15:3] right-shifted), no conversion applied.
+    int16_t getRawBusVoltage(uint8_t ch);
+    int16_t getRawShuntCurrent(uint8_t ch);
 };
 
 struct _INA3221Measurement {
